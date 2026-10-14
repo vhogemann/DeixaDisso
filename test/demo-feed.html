@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DeixaDisso - Feed de Teste & Demonstração</title>
+  <link rel="stylesheet" href="../src/content/content.css">
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: #131b2e;
+      --border: rgba(255, 255, 255, 0.08);
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 30px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .container {
+      max-width: 640px;
+      width: 100%;
+    }
+    header {
+      margin-bottom: 24px;
+      text-align: center;
+    }
+    h1 {
+      font-size: 24px;
+      margin-bottom: 6px;
+      background: linear-gradient(135deg, #fff, #a5b4fc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    p {
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+    .feed {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    /* Estilo simulado de Tweet */
+    article[data-testid="tweet"] {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .tweet-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    div[data-testid="User-Name"] {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .handle {
+      color: var(--text-muted);
+      font-weight: 400;
+      font-size: 13px;
+    }
+    div[data-testid="tweetText"] {
+      font-size: 15px;
+      line-height: 1.5;
+      color: #e2e8f0;
+    }
+    .tweet-actions {
+      display: flex;
+      gap: 24px;
+      color: var(--text-muted);
+      font-size: 13px;
+      padding-top: 6px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .tweet-actions span {
+      cursor: pointer;
+    }
+    .control-panel {
+      margin-top: 24px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      padding: 16px;
+      border-radius: 12px;
+      text-align: center;
+    }
+    .btn {
+      background: #6366f1;
+      color: #fff;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>DeixaDisso Sandbox</h1>
+      <p>Simulação de posts para validar a classificação de sentimento e a injeção dos badges com Gemini Nano / Heurística.</p>
+    </header>
+
+    <div class="feed" id="feed-container">
+      <!-- Post 1: Ragebait / Ataque Tóxico -->
+      <article data-testid="tweet">
+        <div class="tweet-header">
+          <div data-testid="User-Name">
+            <span>Provocador Serial</span>
+            <span class="handle">@troll_br • 5m</span>
+          </div>
+        </div>
+        <div data-testid="tweetText">
+          Cala a boca seu idiota! Quem discorda disso é um completo burro e gado alienado. Vocês são uma piada pronta, o choro é livre!
+        </div>
+        <div class="tweet-actions" role="group">
+          <span>💬 48</span>
+          <span>🔄 12</span>
+          <span>❤️ 9</span>
+          <span>📊 1.2k</span>
+        </div>
+      </article>
+
+      <!-- Post 2: Assunto controverso / Cuidado -->
+      <article data-testid="tweet">
+        <div class="tweet-header">
+          <div data-testid="User-Name">
+            <span>Debatedor Político</span>
+            <span class="handle">@opinioes_afins • 18m</span>
+          </div>
+        </div>
+        <div data-testid="tweetText">
+          A nova reforma tributária vai quebrar o setor produtivo inteiro e quem defende ou é ingênuo ou está passando pano pro governo. Prove que estou errado.
+        </div>
+        <div class="tweet-actions" role="group">
+          <span>💬 120</span>
+          <span>🔄 45</span>
+          <span>❤️ 310</span>
+          <span>📊 14k</span>
+        </div>
+      </article>
+
+      <!-- Post 3: Post Tranquilo / Produtivo -->
+      <article data-testid="tweet">
+        <div class="tweet-header">
+          <div data-testid="User-Name">
+            <span>Mariana Silva</span>
+            <span class="handle">@mari_tech • 42m</span>
+          </div>
+        </div>
+        <div data-testid="tweetText">
+          Pessoal, estou montando meu setup para desenvolvimento web e gostaria de recomendações: quais monitores vocês acham mais confortáveis para programar o dia todo?
+        </div>
+        <div class="tweet-actions" role="group">
+          <span>💬 32</span>
+          <span>🔄 4</span>
+          <span>❤️ 89</span>
+          <span>📊 2.4k</span>
+        </div>
+      </article>
+    </div>
+
+    <div class="control-panel">
+      <p style="margin-bottom: 12px;">Teste manual local sem carregar a extensão:</p>
+      <button class="btn" id="run-simulation-btn">Simular Análise de Sentimento nos Posts</button>
+    </div>
+  </div>
+
+  <script src="../src/shared/i18n/locales/pt_BR.js"></script>
+  <script src="../src/shared/i18n/locales/en.js"></script>
+  <script src="../src/shared/i18n/index.js"></script>
+  <script src="../src/shared/constants.js"></script>
+  <script src="../src/content/ui/badge.js"></script>
+  <script>
+    document.getElementById('run-simulation-btn').addEventListener('click', () => {
+      const tweets = document.querySelectorAll('article[data-testid="tweet"]');
+
+      tweets.forEach(tweet => {
+        if (tweet.querySelector('.deixadisso-badge-container')) return;
+
+        const text = tweet.querySelector('div[data-testid="tweetText"]').innerText;
+        const userNameContainer = tweet.querySelector('div[data-testid="User-Name"]');
+
+        const badgeContainer = globalThis.DeixaDissoUI.createBadge();
+        userNameContainer.appendChild(badgeContainer);
+
+        setTimeout(() => {
+          let mockResult;
+          if (text.includes('Cala a boca') || text.includes('burro')) {
+            mockResult = {
+              verdict: 'leave',
+              badgeText: 'Deixa disso',
+              reason: 'O autor desqualifica interlocutores com ofensas explícitas ("burro", "idiota") e postura de provocação (ragebait). Responder alimentará um ciclo de hostilidade.',
+              source: 'gemini_nano'
+            };
+          } else if (text.includes('reforma') || text.includes('Prove que')) {
+            mockResult = {
+              verdict: 'caution',
+              badgeText: 'Cuidado',
+              reason: 'Post com tom beligerante e maniqueísta sobre a reforma tributária. Alto risco de debate travado em falácias e polarização.',
+              source: 'gemini_nano'
+            };
+          } else {
+            mockResult = {
+              verdict: 'safe',
+              badgeText: 'Produtivo',
+              reason: 'Mariana faz uma pergunta genuína sobre ergonomia de monitores para desenvolvimento web. Interação técnica e acolhedora.',
+              source: 'gemini_nano'
+            };
+          }
+
+          globalThis.DeixaDissoUI.updateBadge(badgeContainer, mockResult);
+        }, 600);
+      });
+    });
+  </script>
+</body>
+</html>

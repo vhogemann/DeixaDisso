@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DeixaDisso - Filtro Anti-Ragebait</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="brand">
+        <div class="logo-wrapper">
+          <img src="../../icons/icon48.png" alt="DeixaDisso" class="app-logo">
+        </div>
+        <div class="brand-text">
+          <h1>DeixaDisso</h1>
+          <p class="tagline">Filtro de Paz Mental com Gemini Nano</p>
+        </div>
+      </div>
+      <div id="model-status-badge" class="status-badge status-checking">
+        <span class="status-dot"></span>
+        <span id="model-status-text">Verificando...</span>
+      </div>
+    </header>
+
+    <!-- TELA 1: Instruções quando o Gemini Nano NÃO está disponível -->
+    <div id="view-setup" class="setup-container" style="display: none;">
+      <div class="setup-card">
+        <div class="setup-icon">🧠</div>
+        <h2 class="setup-title">Gemini Nano Necessário</h2>
+        <p class="setup-subtitle">
+          Esta extensão processa 100% dos posts localmente através da <b>Prompt API</b> nativa do Chrome.
+          Como a IA ainda não está habilitada, a análise está desativada e nenhum badge será exibido nos seus feeds.
+        </p>
+
+        <!-- Bloco de Ação de Download Direto (Exibido quando flags já foram ativadas e modelo pode ser baixado) -->
+        <div id="card-download-action" class="download-action-card" style="display: none;">
+          <h3 class="download-action-title">⬇️ Baixar Gemini Nano Localmente</h3>
+          <p class="download-action-desc">
+            As flags da Prompt API estão ativas! Clique abaixo para iniciar o download do modelo pelo Chrome (~1.7 GB).
+          </p>
+          <div id="download-progress-container" class="progress-container" style="display: none;">
+            <div class="progress-bar-track">
+              <div id="download-progress-fill" class="progress-bar-fill"></div>
+            </div>
+            <div class="progress-info">
+              <span id="download-progress-label">Baixando modelo... 0%</span>
+            </div>
+          </div>
+          <button id="btn-start-download" class="btn-primary btn-full" type="button">
+            ⬇️ Iniciar Download do Gemini Nano
+          </button>
+        </div>
+
+        <!-- Bloco de Instruções de Flags (Exibido se as flags ainda não estiverem ativas) -->
+        <div id="card-flags-instructions">
+          <div class="setup-steps">
+            <div class="step-item">
+              <span class="step-number">1</span>
+              <div class="step-text">
+                Copie e cole na barra de endereços:
+                <div class="code-box">
+                  <code>chrome://flags/#prompt-api-for-gemini-nano</code>
+                  <button class="copy-btn" data-copy="chrome://flags/#prompt-api-for-gemini-nano" type="button">Copiar</button>
+                </div>
+                Marque como <b>Enabled</b>.
+              </div>
+            </div>
+
+            <div class="step-item">
+              <span class="step-number">2</span>
+              <div class="step-text">
+                Em seguida, acesse:
+                <div class="code-box">
+                  <code>chrome://flags/#optimization-guide-on-device-model</code>
+                  <button class="copy-btn" data-copy="chrome://flags/#optimization-guide-on-device-model" type="button">Copiar</button>
+                </div>
+                Marque como <b>Enabled (BypassPerfRequirement)</b>.
+              </div>
+            </div>
+
+            <div class="step-item">
+              <span class="step-number">3</span>
+              <div class="step-text">
+                Clique no botão <b>Relaunch</b> no rodapé do Chrome para reiniciar o navegador.
+              </div>
+            </div>
+          </div>
+
+          <button id="btn-recheck" class="btn-primary btn-full" type="button" style="margin-top: 12px;">
+            🔄 Verificar Disponibilidade Novamente
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TELA 2: Painel de Configurações Completo (Exibido apenas com Gemini Nano Ativo) -->
+    <div id="view-controls" class="controls-container" style="display: none;">
+      <!-- Master Toggle -->
+      <div class="master-card">
+        <div class="master-info">
+          <span class="master-title">Proteção Ativa</span>
+          <span class="master-subtitle">Classificar posts em tempo real</span>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="toggle-master" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <!-- Stats Card -->
+      <div class="stats-card">
+        <div class="stat-item highlight">
+          <span class="stat-number" id="stat-avoided">0</span>
+          <span class="stat-label">Discussões evitadas hoje 🙏</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-number" id="stat-total">0</span>
+          <span class="stat-label">Posts analisados</span>
+        </div>
+      </div>
+
+      <!-- Platforms -->
+      <section class="section">
+        <h2 class="section-title">Redes Monitoradas</h2>
+        <div class="platform-list">
+          <div class="platform-row">
+            <div class="platform-name">
+              <span class="platform-icon">𝕏</span>
+              <span>X / Twitter</span>
+            </div>
+            <label class="switch switch-sm">
+              <input type="checkbox" id="toggle-twitter" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="platform-row">
+            <div class="platform-name">
+              <span class="platform-icon">🦋</span>
+              <span>BlueSky</span>
+            </div>
+            <label class="switch switch-sm">
+              <input type="checkbox" id="toggle-bluesky" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="platform-row">
+            <div class="platform-name">
+              <span class="platform-icon">🧵</span>
+              <span>Threads</span>
+            </div>
+            <label class="switch switch-sm">
+              <input type="checkbox" id="toggle-threads" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <!-- Sensitivity -->
+      <section class="section">
+        <h2 class="section-title">Nível de Sensibilidade</h2>
+        <div class="sensitivity-selector">
+          <label class="radio-card">
+            <input type="radio" name="sensitivity" value="lenient">
+            <div class="radio-content">
+              <span class="radio-title">Tolerante</span>
+              <span class="radio-desc">Alerta só hostilidades graves</span>
+            </div>
+          </label>
+          <label class="radio-card">
+            <input type="radio" name="sensitivity" value="balanced" checked>
+            <div class="radio-content">
+              <span class="radio-title">Equilibrado</span>
+              <span class="radio-desc">Ragebait e discussões de má-fé</span>
+            </div>
+          </label>
+          <label class="radio-card">
+            <input type="radio" name="sensitivity" value="zen">
+            <div class="radio-content">
+              <span class="radio-title">Modo Zen</span>
+              <span class="radio-desc">Máxima proteção emocional</span>
+            </div>
+          </label>
+        </div>
+      </section>
+
+      <!-- Interactive Tester -->
+      <section class="section">
+        <div class="section-header-row">
+          <h2 class="section-title">Testar Frase Agora</h2>
+          <span class="section-hint">Simule com o Gemini Nano</span>
+        </div>
+        <div class="tester-box">
+          <textarea id="tester-input" placeholder="Cole uma resposta ou tweet para a IA analisar..." rows="2"></textarea>
+          <button id="tester-btn" class="btn-primary" type="button">Analisar Post</button>
+        </div>
+        <div id="tester-result" class="tester-result" style="display: none;">
+          <div class="tester-badge-preview" id="tester-badge-preview"></div>
+          <div class="tester-reason" id="tester-reason"></div>
+        </div>
+      </section>
+    </div>
+
+    <footer class="app-footer">
+      <span>100% on-device & privado • Zero dados enviados para a nuvem</span>
+    </footer>
+  </div>
+
+  <script src="../shared/i18n/locales/pt_BR.js"></script>
+  <script src="../shared/i18n/locales/en.js"></script>
+  <script src="../shared/i18n/index.js"></script>
+  <script src="../shared/constants.js"></script>
+  <script src="../shared/prompt-api.js"></script>
+  <script src="../shared/storage.js"></script>
+  <script src="../content/ui/badge.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

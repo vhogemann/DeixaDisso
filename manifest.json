@@ -1,0 +1,88 @@
+{
+  "manifest_version": 3,
+  "name": "DeixaDisso - Filtro Zen & Anti-Ragebait",
+  "version": "1.0.0",
+  "description": "Análise de sentimento on-device com Gemini Nano para Bluesky, Threads e X/Twitter. Saiba se vale a pena responder.",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_popup": "src/popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_title": "DeixaDisso - Status e Configurações"
+  },
+  "background": {
+    "service_worker": "src/background/service-worker.js",
+    "type": "module"
+  },
+  "permissions": [
+    "storage",
+    "offscreen"
+  ],
+  "host_permissions": [
+    "https://twitter.com/*",
+    "https://x.com/*",
+    "https://bsky.app/*",
+    "https://www.threads.net/*",
+    "https://threads.net/*",
+    "https://*.threads.net/*",
+    "https://www.threads.com/*",
+    "https://threads.com/*",
+    "https://*.threads.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://twitter.com/*",
+        "https://x.com/*",
+        "https://bsky.app/*",
+        "https://www.threads.net/*",
+        "https://threads.net/*",
+        "https://*.threads.net/*",
+        "https://www.threads.com/*",
+        "https://threads.com/*",
+        "https://*.threads.com/*"
+      ],
+      "js": [
+        "src/shared/i18n/locales/pt_BR.js",
+        "src/shared/i18n/locales/en.js",
+        "src/shared/i18n/index.js",
+        "src/shared/constants.js",
+        "src/content/ui/badge.js",
+        "src/content/adapters/twitter.js",
+        "src/content/adapters/bluesky.js",
+        "src/content/adapters/threads.js",
+        "src/content/content.js"
+      ],
+      "css": [
+        "src/content/content.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "icons/*",
+        "src/content/content.css"
+      ],
+      "matches": [
+        "https://twitter.com/*",
+        "https://x.com/*",
+        "https://bsky.app/*",
+        "https://www.threads.net/*",
+        "https://threads.net/*",
+        "https://*.threads.net/*",
+        "https://www.threads.com/*",
+        "https://threads.com/*",
+        "https://*.threads.com/*"
+      ]
+    }
+  ]
+}
