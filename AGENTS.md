@@ -61,7 +61,7 @@ Welcome to **DeixaDisso**. This document serves as the architectural specificati
   - Implements debounce (500ms) and element tracking via `WeakSet` to prevent duplicate analysis.
 - **`src/background/service-worker.js` (Background Worker):**
   - Acts as the central coordinator.
-  - Manages LRU in-memory sentiment cache (hashed post text -> verdict) to avoid redundant inferences.
+  - Manages persistent sentiment cache (backed by `chrome.storage.local` with LRU eviction of 500 items and debounced writes) to provide instant badge rendering across page reloads and scroll.
   - Creates and manages the lifecycle of the Offscreen document.
 - **`src/offscreen/` (Offscreen Document):**
   - **Why Offscreen?** In Chrome Manifest V3, Service Workers lack full DOM and certain experimental browser window APIs. The offscreen document runs in a minimal DOM context, holding the persistent Gemini Nano session.

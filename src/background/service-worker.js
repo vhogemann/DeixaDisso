@@ -4,6 +4,53 @@ import '../shared/constants.js';
 let creatingOffscreenPromise = null;
 const analysisCache = new Map(); // Hash -> { verdict, badgeText, reason, source }
 const MAX_CACHE_SIZE = 500;
+let cacheLoaded = false;
+let cacheSaveTimer = null;
+
+// Garante que o cache persistido no chrome.storage.local seja carregado na inicialização
+async function ensureCacheLoaded() {
+  if (cacheLoaded) return;
+  const keys = globalThis.DEIXADISSO_CONSTANTS?.STORAGE_KEYS || { CACHE: 'deixadisso_cache' };
+  try {
+    const data = await chrome.storage.local.get(keys.CACHE);
+    const stored = data[keys.CACHE];
+    if (stored && typeof stored === 'object') {
+      for (const [k, v] of Object.entries(stored)) {
+        if (!analysisCache.has(k)) {
+          analysisCache.set(k, v);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[ServiceWorker] Falha ao carregar cache do storage:', err);
+  } finally {
+    cacheLoaded = true;
+  }
+}
+
+// Persiste o cache em disco com debounce para não impactar performance no scroll rápido
+function scheduleCachePersist() {
+  clearTimeout(cacheSaveTimer);
+  cacheSaveTimer = setTimeout(async () => {
+    const keys = globalThis.DEIXADISSO_CONSTANTS?.STORAGE_KEYS || { CACHE: 'deixadisso_cache' };
+    try {
+      const obj = Object.fromEntries(analysisCache);
+      await chrome.storage.local.set({ [keys.CACHE]: obj });
+    } catch (err) {
+      console.warn('[ServiceWorker] Falha ao persistir cache:', err);
+    }
+  }, 1000);
+}
+
+async function clearAnalysisCache() {
+  analysisCache.clear();
+  const keys = globalThis.DEIXADISSO_CONSTANTS?.STORAGE_KEYS || { CACHE: 'deixadisso_cache' };
+  try {
+    await chrome.storage.local.remove(keys.CACHE);
+  } catch (err) {
+    console.warn('[ServiceWorker] Falha ao limpar cache do storage:', err);
+  }
+}
 
 // Garantir documento offscreen para execução com acesso ao DOM/Window AI
 async function setupOffscreenDocument() {
@@ -32,14 +79,14 @@ async function setupOffscreenDocument() {
   creatingOffscreenPromise = null;
 }
 
-// Cria hash simples de string para cache
+// Cria hash determinístico de string para chave do cache
 function hashString(str) {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     hash = (hash << 5) - hash + str.charCodeAt(i);
     hash |= 0;
   }
-  return hash.toString();
+  return `${str.length}_${hash}`;
 }
 
 async function getStats() {
@@ -130,6 +177,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     updateActionBadge(message.status).then(() => sendResponse({ ok: true }));
     return true;
   }
+
+  if (msgType === 'CLEAR_CACHE') {
+    clearAnalysisCache().then(() => sendResponse({ ok: true }));
+    return true;
+  }
 });
 
 async function startModelDownload() {
@@ -153,6 +205,8 @@ async function handlePostAnalysis(text, sensitivity) {
     };
   }
 
+  await ensureCacheLoaded();
+
   const textHash = hashString(text.trim() + '_' + (sensitivity || 'balanced'));
   if (analysisCache.has(textHash)) {
     return analysisCache.get(textHash);
@@ -173,6 +227,7 @@ async function handlePostAnalysis(text, sensitivity) {
         analysisCache.delete(firstKey);
       }
       analysisCache.set(textHash, result);
+      scheduleCachePersist();
       await recordStats(result.verdict);
       return result;
     }

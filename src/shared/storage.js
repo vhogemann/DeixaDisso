@@ -73,6 +73,26 @@ const DeixaDissoStorage = {
     } catch (e) {
       console.warn('[DeixaDisso] Erro ao atualizar stats:', e);
     }
+  },
+
+  async getCache() {
+    const keys = globalThis.DEIXADISSO_CONSTANTS?.STORAGE_KEYS || { CACHE: 'deixadisso_cache' };
+    try {
+      const data = await chrome.storage.local.get(keys.CACHE);
+      return data[keys.CACHE] || {};
+    } catch (e) {
+      console.warn('[DeixaDisso] Erro ao ler cache:', e);
+      return {};
+    }
+  },
+
+  async clearCache() {
+    const keys = globalThis.DEIXADISSO_CONSTANTS?.STORAGE_KEYS || { CACHE: 'deixadisso_cache' };
+    try {
+      await chrome.storage.local.remove(keys.CACHE);
+    } catch (e) {
+      console.warn('[DeixaDisso] Erro ao limpar cache:', e);
+    }
   }
 };
 
