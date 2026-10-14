@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "DeixaDisso - Filtro Zen & Anti-Ragebait",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Análise de sentimento on-device com Gemini Nano para Bluesky, Threads e X/Twitter. Saiba se vale a pena responder.",
   "icons": {
     "16": "icons/icon16.png",
