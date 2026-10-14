@@ -1,0 +1,154 @@
+[
+  {
+    "id": "fp-proletariado",
+    "category": "false_positive_risk",
+    "lang": "pt",
+    "text": "A situação é bem revolta do proletáriado mesmo, pega as suas ferramentas, suas foices e martelos, e sai pra lutar. Eu não tenho foice nem martelo, mas tenho um computador.",
+    "expectedVerdict": "safe",
+    "notes": "Metáfora política/trabalhista sem agressão a pessoas. Não deve ser classificado como ragebait."
+  },
+  {
+    "id": "fp-kill-process",
+    "category": "false_positive_risk",
+    "lang": "pt",
+    "text": "Vou matar o processo com kill -9 e dar um git blame pra ver quem quebrou a build em produção.",
+    "expectedVerdict": "safe",
+    "notes": "Jargão técnico de desenvolvimento de software ('matar processo', 'git blame'). Totalmente inofensivo."
+  },
+  {
+    "id": "fp-lib-dead",
+    "category": "false_positive_risk",
+    "lang": "pt",
+    "text": "Essa biblioteca morreu, o autor abandonou o repositório faz 3 anos. Recomendo migrar pra alternativa mantida.",
+    "expectedVerdict": "safe",
+    "notes": "Crítica técnica sobre software abandonado. Não é ragebait nem ataque a pessoas."
+  },
+  {
+    "id": "slang-positive-1",
+    "category": "slang_profanity",
+    "lang": "pt",
+    "text": "Puta que pariu, esse novo álbum ficou bom demais, surreal de maravilhoso!",
+    "expectedVerdict": "safe",
+    "notes": "Palavrão usado como ênfase enfática de entusiasmo e elogio, sem teor ofensivo."
+  },
+  {
+    "id": "slang-positive-2",
+    "category": "slang_profanity",
+    "lang": "pt",
+    "text": "Caralho, finalmente passei na entrevista de emprego! Valeu demais pelo apoio de todo mundo aqui!",
+    "expectedVerdict": "safe",
+    "notes": "Comemoração de conquista pessoal com palavrão de alívio. Interação segura e acolhedora."
+  },
+  {
+    "id": "rage-passive-aggressive-1",
+    "category": "pure_ragebait",
+    "lang": "pt",
+    "text": "Engraçado como certos 'seniores' da timeline não sabem nem o básico de arquitetura. É o famoso sênior de 2 anos.",
+    "expectedVerdict": "leave",
+    "notes": "Provocação passiva-agressiva desqualificando colegas de profissão, feita para gerar bate-boca estéril."
+  },
+  {
+    "id": "rage-passive-aggressive-2",
+    "category": "pure_ragebait",
+    "lang": "pt",
+    "text": "Todo mundo que usa essa linguagem de programação claramente tem preguiça de pensar. Só aceitem a mediocridade.",
+    "expectedVerdict": "leave",
+    "notes": "Ataque generalizado visando inflamar discussões improdutivas."
+  },
+  {
+    "id": "rage-insult-direct",
+    "category": "pure_ragebait",
+    "lang": "pt",
+    "text": "Você é burro ou só se faz? Cala a boca e estuda o assunto antes de vir passar vergonha na timeline.",
+    "expectedVerdict": "leave",
+    "notes": "Ofensa explícita e desqualificação pessoal direta ('burro', 'cala a boca'). Alto desgaste emocional."
+  },
+  {
+    "id": "rage-hostile-work",
+    "category": "pure_ragebait",
+    "lang": "pt",
+    "text": "Seu código é um lixo completo e você é uma piada como profissional. Some daqui.",
+    "expectedVerdict": "leave",
+    "notes": "Assédio e ataque pessoal destrutivo. Responder só intensificará o conflito."
+  },
+  {
+    "id": "debate-reforma",
+    "category": "healthy_debate",
+    "lang": "pt",
+    "text": "Discordo frontalmente da sua análise sobre a reforma tributária. Os relatórios recentes do IPEA apontam o contrário, recomendo a leitura da tabela 4.",
+    "expectedVerdict": "caution",
+    "notes": "Discordância técnica sobre tema político/econômico inflamado. Exige ponderação ao interagir."
+  },
+  {
+    "id": "debate-rto",
+    "category": "healthy_debate",
+    "lang": "pt",
+    "text": "A volta ao presencial é uma discussão complexa: empresas alegam cultura, mas trabalhadores perdem 3h no trânsito. Qual seria um modelo justo?",
+    "expectedVerdict": "caution",
+    "notes": "Tema polêmico de mercado de trabalho, com pergunta aberta mas potencial para debate acalorado."
+  },
+  {
+    "id": "civil-question-hardware",
+    "category": "civil_question",
+    "lang": "pt",
+    "text": "Alguém tem indicação de monitor ultrawide com boa fidelidade de cores para design e ergonomia?",
+    "expectedVerdict": "safe",
+    "notes": "Dúvida genuína, técnica e civilizada. Excelente para engajar."
+  },
+  {
+    "id": "civil-gratitude",
+    "category": "civil_question",
+    "lang": "pt",
+    "text": "Muito obrigado pela explicação detalhada sobre memoization no React, salvou meu dia!",
+    "expectedVerdict": "safe",
+    "notes": "Mensagem positiva de gratidão em comunidade técnica."
+  },
+  {
+    "id": "en-fp-kill-process",
+    "category": "false_positive_risk",
+    "lang": "en",
+    "text": "Let's kill the zombie processes and wipe the docker cache to see if the build passes.",
+    "expectedVerdict": "safe",
+    "notes": "Technical Unix/Docker terminology ('kill zombie process'). Completely safe."
+  },
+  {
+    "id": "en-slang-positive",
+    "category": "slang_profanity",
+    "lang": "en",
+    "text": "Holy shit, this performance optimization cut the latency by 80%! Incredible work!",
+    "expectedVerdict": "safe",
+    "notes": "Vulgar slang used for enthusiasm and praise. Non-hostile."
+  },
+  {
+    "id": "en-ragebait-bait",
+    "category": "pure_ragebait",
+    "lang": "en",
+    "text": "Imagine unironically thinking this framework is good in 2026. Clueless junior devs everywhere.",
+    "expectedVerdict": "leave",
+    "notes": "Elitist provocation aimed at stirring emotional backlash."
+  },
+  {
+    "id": "en-insult-direct",
+    "category": "pure_ragebait",
+    "lang": "en",
+    "text": "Shut up you absolute clown, you have no idea what you are talking about. Delete your account.",
+    "expectedVerdict": "leave",
+    "notes": "Direct insult and aggressive harassment. Immediate 'leave'."
+  },
+  {
+    "id": "en-debate-sensitive",
+    "category": "healthy_debate",
+    "lang": "en",
+    "text": "I disagree with this policy proposal. Here are three empirical studies showing unintended market distortions.",
+    "expectedVerdict": "caution",
+    "notes": "Civil disagreement on controversial economics topic."
+  },
+  {
+    "id": "en-civil-inquiry",
+    "category": "civil_question",
+    "lang": "en",
+    "text": "Could someone recommend good open-source libraries for WebGPU shader debugging?",
+    "expectedVerdict": "safe",
+    "notes": "Constructive technical question."
+  }
+]

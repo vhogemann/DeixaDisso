@@ -1,0 +1,21 @@
+{
+  "name": "deixadisso",
+  "version": "1.0.0",
+  "description": "Filtro de Paz Mental & Moderação On-Device com Gemini Nano para redes sociais",
+  "main": "src/background/service-worker.js",
+  "scripts": {
+    "eval": "node harness/eval.js",
+    "eval:docker": "docker compose -f harness/docker-compose.yml up --build",
+    "optimize": "node harness/optimize.js",
+    "test:i18n": "node -e \"require('./src/shared/i18n/locales/pt_BR.js'); require('./src/shared/i18n/locales/en.js'); console.log('i18n OK');\""
+  },
+  "keywords": [
+    "gemini-nano",
+    "prompt-api",
+    "chrome-extension",
+    "sentiment-analysis",
+    "on-device-ai"
+  ],
+  "author": "Victor Hogemann",
+  "license": "MIT"
+}

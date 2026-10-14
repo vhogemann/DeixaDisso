@@ -1,0 +1,21 @@
+services:
+  eval-runner:
+    build:
+      context: ..
+      dockerfile: harness/Dockerfile
+    container_name: deixadisso-eval-runner
+    shm_size: 2gb
+    security_opt:
+      - seccomp:unconfined
+    volumes:
+      # Monta o código fonte do host para que edições no prompt reflitam imediatamente sem rebuild
+      - ..:/app
+      # Volume persistente para armazenar os pesos do Gemini Nano baixados pelo Chrome (~1.7 GB)
+      - chrome-nano-weights:/root/.config/google-chrome
+    environment:
+      - CHROME_CDP_PORT=9222
+    command: ["node", "harness/eval.js"]
+
+volumes:
+  chrome-nano-weights:
+    name: deixadisso-chrome-nano-weights

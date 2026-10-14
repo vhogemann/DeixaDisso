@@ -65,3 +65,31 @@ Para utilizar os recursos de inteligência artificial on-device da Prompt API:
    - Digite ou cole qualquer frase no campo "Testar Frase Agora" e veja a classificação imediata!
 3. **Em Redes Sociais Suportadas**:
    - Navegue normalmente no [X / Twitter](https://x.com), [BlueSky](https://bsky.app) ou [Threads](https://threads.net).
+
+---
+
+## 🔬 Self-Improving Loop & Harness de Avaliação (Docker)
+
+Para calibrar o System Prompt e contornar as limitações de capacidade do Gemini Nano (minimizando falsos positivos e alucinações), criamos um harness de testes automatizado:
+
+### 1. Executar o Benchmark via Docker (Ambiente Isolado)
+```bash
+npm run eval:docker
+# ou diretamente via docker compose:
+docker compose -f harness/docker-compose.yml up --build
+```
+> O volume Docker `chrome-nano-weights` armazena os pesos do modelo localmente para não precisar baixar novamente a cada execução.
+
+### 2. Executar Localmente na sua Máquina
+```bash
+npm run eval
+```
+
+### 3. Testar e Destilar um Novo Prompt Candidato
+```bash
+node harness/optimize.js --candidate=harness/prompts/candidate_fewshot.txt
+
+# Para aplicar o prompt vencedor diretamente aos arquivos de produção:
+node harness/optimize.js --candidate=harness/prompts/candidate_fewshot.txt --apply
+```
+O benchmark roda o dataset em `harness/dataset.json` cobrindo jargões técnicos, falsos positivos conhecidos, palavrões casuais/positivos, ragebaits sutis e debates reais, gerando métricas de **Acurácia**, **Falsos Positivos**, **Falsos Negativos** e **Latência**.
