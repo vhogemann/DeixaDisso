@@ -8,11 +8,14 @@
 
 const fs = require('fs');
 const path = require('path');
+const http = require('http');
 const { spawn } = require('child_process');
 
 const DATASET_PATH = path.join(__dirname, 'dataset.json');
 const RESULTS_DIR = path.join(__dirname, 'results');
-const DEFAULT_PORT = parseInt(process.env.CHROME_CDP_PORT || '9222', 10);
+const PROFILE_DIR = path.join(__dirname, '.chrome-harness-profile');
+const DEFAULT_CDP_PORT = parseInt(process.env.CHROME_CDP_PORT || '9222', 10);
+const DEFAULT_HTTP_PORT = parseInt(process.env.HARNESS_HTTP_PORT || '9876', 10);
 
 // Carrega os prompts oficiais do projeto
 const PT_BR_LOCALE = require('../src/shared/i18n/locales/pt_BR.js');
@@ -36,27 +39,30 @@ async function sleep(ms) {
 
 // Conexão e comunicação direta via Chrome DevTools Protocol (CDP) usando WebSockets nativos do Node
 class ChromeCDP {
-  constructor(port = DEFAULT_PORT) {
+  constructor(port = DEFAULT_CDP_PORT) {
     this.port = port;
     this.ws = null;
     this.msgId = 1;
   }
 
-  async connect(retries = 25) {
+  async connect(httpPort = DEFAULT_HTTP_PORT, retries = 30) {
     let target = null;
     for (let i = 0; i < retries; i++) {
       try {
-        const res = await fetch(`http://127.0.0.1:${this.port}/json/new?about:blank`, { method: 'PUT' });
+        const res = await fetch(`http://127.0.0.1:${this.port}/json/list`);
         if (res.ok) {
-          target = await res.json();
-          break;
+          const list = await res.json();
+          target = list.find(p => p.url.includes(`${httpPort}`)) || list.find(p => p.type === 'page');
+          if (target && target.webSocketDebuggerUrl) {
+            break;
+          }
         }
       } catch (_) {}
-      await sleep(250);
+      await sleep(300);
     }
 
-    if (!target) {
-      throw new Error(`Não foi possível conectar ao Chrome CDP na porta ${this.port}. Verifique se o Chrome está rodando.`);
+    if (!target || !target.webSocketDebuggerUrl) {
+      throw new Error(`Não foi possível conectar ao Chrome CDP na porta ${this.port}.`);
     }
 
     this.ws = new WebSocket(target.webSocketDebuggerUrl);
@@ -92,9 +98,10 @@ class ChromeCDP {
     });
   }
 
-  async evaluate(expression) {
+  async evaluate(expression, userGesture = true) {
     const res = await this.send('Runtime.evaluate', {
       expression,
+      userGesture,
       awaitPromise: true,
       returnByValue: true
     });
@@ -106,6 +113,69 @@ class ChromeCDP {
       try { this.ws.close(); } catch (_) {}
     }
   }
+}
+
+// Inicia um servidor HTTP local simples para expor uma origem segura (localhost) ao Chrome
+function startLocalServer(port = DEFAULT_HTTP_PORT) {
+  const server = http.createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    res.end(`<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>DeixaDisso Harness</title></head>
+<body><h1>DeixaDisso Local AI Runner</h1></body>
+</html>`);
+  });
+
+  return new Promise((resolve) => {
+    server.listen(port, '127.0.0.1', () => resolve(server));
+  });
+}
+
+// Inicia o Chrome Headless localmente com suporte completo à Prompt API
+async function ensureChromeRunning(cdpPort = DEFAULT_CDP_PORT, httpPort = DEFAULT_HTTP_PORT) {
+  try {
+    const check = await fetch(`http://127.0.0.1:${cdpPort}/json/version`);
+    if (check.ok) {
+      console.log(`${colors.green}✓ Chrome CDP detectado na porta ${cdpPort}.${colors.reset}`);
+      return null;
+    }
+  } catch (_) {}
+
+  console.log(`${colors.cyan}Iniciando instância isolada do Google Chrome com Gemini Nano ativado...${colors.reset}`);
+
+  const possiblePaths = [
+    '/usr/bin/google-chrome',
+    '/usr/bin/google-chrome-stable',
+    '/usr/bin/chromium',
+    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+  ];
+
+  const chromeExecutable = possiblePaths.find(p => fs.existsSync(p));
+  if (!chromeExecutable) {
+    throw new Error('Executável do Google Chrome não encontrado nos caminhos padrão.');
+  }
+
+  if (!fs.existsSync(PROFILE_DIR)) {
+    fs.mkdirSync(PROFILE_DIR, { recursive: true });
+  }
+
+  const args = [
+    '--headless=new',
+    `--remote-debugging-port=${cdpPort}`,
+    `--user-data-dir=${PROFILE_DIR}`,
+    '--enable-features=PromptApiForGeminiNano,OptimizationGuideOnDeviceModel',
+    '--enable-blink-features=PromptApiForGeminiNano',
+    '--optimization-guide-on-device-model-execution-feature-allowed-for-test',
+    '--optimization-guide-performance-class=4',
+    '--component-updater=fast-update',
+    '--no-first-run',
+    '--no-default-browser-check',
+    `http://127.0.0.1:${httpPort}`
+  ];
+
+  const proc = spawn(chromeExecutable, args, { stdio: 'ignore' });
+  await sleep(1500);
+  return proc;
 }
 
 // Injeta o helper DeixaDissoPromptAPI na página de teste do Chrome
@@ -146,50 +216,6 @@ async function runInference(cdp, text, systemPrompt, lang = 'pt') {
   };
 }
 
-// Inicia o Chrome Headless localmente se nenhum estiver rodando
-async function ensureChromeRunning(port = DEFAULT_PORT) {
-  try {
-    const check = await fetch(`http://127.0.0.1:${port}/json/version`);
-    if (check.ok) {
-      console.log(`${colors.green}✓ Chrome CDP detectado na porta ${port}.${colors.reset}`);
-      return null; // Já está rodando externamente (ex: no Docker ou na máquina)
-    }
-  } catch (_) {}
-
-  console.log(`${colors.cyan}Iniciando instância isolada do Google Chrome para avaliação...${colors.reset}`);
-  
-  // Caminhos típicos (macOS ou Linux / Docker)
-  const possiblePaths = [
-    '/usr/bin/google-chrome',
-    '/usr/bin/google-chrome-stable',
-    '/usr/bin/chromium',
-    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
-  ];
-
-  let chromeExecutable = possiblePaths.find(p => fs.existsSync(p));
-  if (!chromeExecutable) {
-    throw new Error('Executável do Google Chrome não encontrado nos caminhos padrão.');
-  }
-
-  const profileDir = path.join('/tmp', `deixadisso-harness-${Date.now()}`);
-  const args = [
-    '--headless=new',
-    `--remote-debugging-port=${port}`,
-    `--user-data-dir=${profileDir}`,
-    '--enable-features=PromptApiForGeminiNano,OptimizationGuideOnDeviceModel',
-    '--enable-blink-features=PromptApiForGeminiNano',
-    '--optimization-guide-on-device-model-execution-feature-allowed-for-test',
-    '--optimization-guide-performance-class=4',
-    '--no-first-run',
-    '--no-default-browser-check',
-    'about:blank'
-  ];
-
-  const proc = spawn(chromeExecutable, args, { stdio: 'ignore' });
-  await sleep(1500);
-  return { proc, profileDir };
-}
-
 async function runBenchmark(customPrompt = null) {
   console.log(`${colors.bold}====================================================${colors.reset}`);
   console.log(`${colors.bold}🧠 DeixaDisso - Gemini Nano Prompt Evaluation Harness${colors.reset}`);
@@ -198,18 +224,31 @@ async function runBenchmark(customPrompt = null) {
   const dataset = JSON.parse(fs.readFileSync(DATASET_PATH, 'utf8'));
   console.log(`Carregado dataset com ${colors.bold}${dataset.length}${colors.reset} casos de teste.\n`);
 
-  let chromeHandle = null;
-  const cdp = new ChromeCDP(DEFAULT_PORT);
+  const server = await startLocalServer(DEFAULT_HTTP_PORT);
+  let chromeProc = null;
+  const cdp = new ChromeCDP(DEFAULT_CDP_PORT);
 
   try {
-    chromeHandle = await ensureChromeRunning(DEFAULT_PORT);
+    chromeProc = await ensureChromeRunning(DEFAULT_CDP_PORT, DEFAULT_HTTP_PORT);
     console.log(`${colors.cyan}Conectando ao Chrome DevTools Protocol...${colors.reset}`);
-    await cdp.connect();
+    await cdp.connect(DEFAULT_HTTP_PORT);
     await injectPromptAPIHelper(cdp);
 
     // Verifica disponibilidade do modelo no Chrome
     const availability = await cdp.evaluate('DeixaDissoPromptAPI.checkAvailability()');
     console.log(`Status da Prompt API no Chrome: ${colors.bold}${availability?.status || 'desconhecido'}${colors.reset} (raw: ${availability?.raw})`);
+
+    // Se estiver em download_available, aciona a criação de sessão com monitor
+    if (availability?.status === 'download_available' || availability?.raw === 'downloadable') {
+      console.log(`${colors.yellow}O modelo precisa ser carregado. Inicializando sessão...${colors.reset}`);
+      await cdp.evaluate(`
+        (async () => {
+          if (window.LanguageModel) {
+            await window.LanguageModel.create();
+          }
+        })()
+      `, true);
+    }
 
     const results = [];
     let correctCount = 0;
@@ -227,7 +266,7 @@ async function runBenchmark(customPrompt = null) {
       process.stdout.write(`[${i + 1}/${dataset.length}] ${colors.bold}${item.id}${colors.reset} (${item.category})... `);
 
       const inference = await runInference(cdp, item.text, systemPrompt, lang);
-      totalLatency += inference.durationMs;
+      totalLatency += (inference.durationMs || 0);
 
       const isMatch = inference.verdict === item.expectedVerdict;
       if (isMatch) {
@@ -281,7 +320,6 @@ async function runBenchmark(customPrompt = null) {
       console.log('\n');
     }
 
-    // Salva o resultado em arquivo JSON
     if (!fs.existsSync(RESULTS_DIR)) {
       fs.mkdirSync(RESULTS_DIR, { recursive: true });
     }
@@ -301,11 +339,9 @@ async function runBenchmark(customPrompt = null) {
     return { accuracy, falsePositives, falseNegatives, results };
   } finally {
     cdp.close();
-    if (chromeHandle?.proc) {
-      chromeHandle.proc.kill();
-      try {
-        fs.rmSync(chromeHandle.profileDir, { recursive: true, force: true });
-      } catch (_) {}
+    server.close();
+    if (chromeProc) {
+      chromeProc.kill();
     }
   }
 }
