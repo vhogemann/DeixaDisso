@@ -168,6 +168,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (msgType === 'OFFSCREEN_DOWNLOAD_PROGRESS') {
+    if (message.payload) {
+      chrome.storage.local.set({ deixadisso_download_status: message.payload }).catch(() => {});
+    }
+    sendResponse({ ok: true });
+    return true;
+  }
+
   if (msgType === 'START_DOWNLOAD') {
     updateActionBadge('downloading');
     startModelDownload({
@@ -193,14 +201,31 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
+async function getEffectiveBackendConfig(options = {}) {
+  try {
+    const data = await chrome.storage.local.get('deixadisso_settings');
+    const saved = data.deixadisso_settings || {};
+    return {
+      backend: options.backend || saved.backend || 'auto',
+      modelId: options.modelId || saved.webllmModel || 'Qwen3-0.6B-q4f16_1-MLC'
+    };
+  } catch (_) {
+    return {
+      backend: options.backend || 'auto',
+      modelId: options.modelId || 'Qwen3-0.6B-q4f16_1-MLC'
+    };
+  }
+}
+
 async function startModelDownload(options = {}) {
   try {
     await setupOffscreenDocument();
+    const cfg = await getEffectiveBackendConfig(options);
     return await chrome.runtime.sendMessage({
       target: 'offscreen',
       type: 'START_DOWNLOAD',
-      backend: options.backend,
-      modelId: options.modelId
+      backend: cfg.backend,
+      modelId: cfg.modelId
     });
   } catch (err) {
     return { status: 'error', error: err.message };
@@ -225,13 +250,14 @@ async function handlePostAnalysis(text, sensitivity, options = {}) {
 
   try {
     await setupOffscreenDocument();
+    const cfg = await getEffectiveBackendConfig(options);
     const result = await chrome.runtime.sendMessage({
       target: 'offscreen',
       type: 'ANALYZE',
       text,
       sensitivity,
-      backend: options.backend,
-      modelId: options.modelId
+      backend: cfg.backend,
+      modelId: cfg.modelId
     });
 
     if (result && result.verdict) {
@@ -258,11 +284,12 @@ async function handlePostAnalysis(text, sensitivity, options = {}) {
 async function checkModelStatus(options = {}) {
   try {
     await setupOffscreenDocument();
+    const cfg = await getEffectiveBackendConfig(options);
     const status = await chrome.runtime.sendMessage({
       target: 'offscreen',
       type: 'CHECK_MODEL',
-      backend: options.backend,
-      modelId: options.modelId
+      backend: cfg.backend,
+      modelId: cfg.modelId
     });
     return status;
   } catch (err) {

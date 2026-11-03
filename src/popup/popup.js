@@ -27,6 +27,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   const controlsBackendSelect = document.getElementById('controls-backend-select');
   const controlsModelSelect = document.getElementById('controls-model-select');
   const controlsModelGroup = document.getElementById('controls-model-group');
+  const controlsDownloadBox = document.getElementById('controls-download-box');
+  const controlsProgressContainer = document.getElementById('controls-progress-container');
+  const controlsProgressFill = document.getElementById('controls-progress-fill');
+  const controlsProgressLabel = document.getElementById('controls-progress-label');
+  const btnControlsDownload = document.getElementById('btn-controls-download');
 
   const sensitivityRadios = document.querySelectorAll('input[name="sensitivity"]');
 
@@ -174,6 +179,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         viewSetup.style.display = 'none';
         viewControls.style.display = 'flex';
+        if (controlsDownloadBox) controlsDownloadBox.style.display = 'none';
       } else if (status === 'downloading') {
         modelStatusBadge.classList.add('status-downloading');
         modelStatusText.textContent = i18n.t('popup.statusDownloading');
@@ -218,29 +224,53 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Ação de disparar o download
-  if (btnStartDownload) {
-    btnStartDownload.addEventListener('click', async () => {
+  async function triggerModelDownload() {
+    if (btnStartDownload) {
       btnStartDownload.disabled = true;
       btnStartDownload.textContent = i18n.t('popup.downloadStarting');
-      if (downloadProgressContainer) downloadProgressContainer.style.display = 'flex';
-      if (downloadProgressLabel) downloadProgressLabel.textContent = i18n.t('popup.downloadStarting');
+    }
+    if (btnControlsDownload) {
+      btnControlsDownload.disabled = true;
+      btnControlsDownload.textContent = i18n.t('popup.downloadStarting');
+    }
+    if (downloadProgressContainer) downloadProgressContainer.style.display = 'flex';
+    if (downloadProgressLabel) downloadProgressLabel.textContent = i18n.t('popup.downloadStarting');
+    if (controlsDownloadBox) controlsDownloadBox.style.display = 'block';
+    if (controlsProgressContainer) controlsProgressContainer.style.display = 'flex';
+    if (controlsProgressLabel) controlsProgressLabel.textContent = i18n.t('popup.downloadStarting');
 
-      try {
-        const currentSettings = await globalThis.DeixaDissoStorage.getSettings();
-        const res = await chrome.runtime.sendMessage({
-          type: 'START_DOWNLOAD',
-          backend: currentSettings.backend || 'auto',
-          modelId: currentSettings.webllmModel || 'Qwen3-0.6B-q4f16_1-MLC'
-        });
-        if (res && res.status === 'ready') {
-          await updateModelStatus();
-        }
-      } catch (err) {
-        if (downloadProgressLabel) downloadProgressLabel.textContent = `Error: ${err.message || 'Download failed'}`;
+    try {
+      const currentSettings = await globalThis.DeixaDissoStorage.getSettings();
+      const res = await chrome.runtime.sendMessage({
+        type: 'START_DOWNLOAD',
+        backend: currentSettings.backend || 'auto',
+        modelId: currentSettings.webllmModel || 'Qwen3-0.6B-q4f16_1-MLC'
+      });
+      if (res && res.status === 'ready') {
+        await updateModelStatus();
+      } else if (res && res.status === 'error') {
+        throw new Error(res.error || 'Download failed');
+      }
+    } catch (err) {
+      const errText = `Erro: ${err.message || 'Download failed'}`;
+      if (downloadProgressLabel) downloadProgressLabel.textContent = errText;
+      if (controlsProgressLabel) controlsProgressLabel.textContent = errText;
+      if (btnStartDownload) {
         btnStartDownload.disabled = false;
         btnStartDownload.textContent = i18n.t('popup.downloadActionBtn');
       }
-    });
+      if (btnControlsDownload) {
+        btnControlsDownload.disabled = false;
+        btnControlsDownload.textContent = i18n.t('popup.downloadActionBtn');
+      }
+    }
+  }
+
+  if (btnStartDownload) {
+    btnStartDownload.addEventListener('click', triggerModelDownload);
+  }
+  if (btnControlsDownload) {
+    btnControlsDownload.addEventListener('click', triggerModelDownload);
   }
 
   // Ouvir progresso do download gravado no storage
@@ -248,13 +278,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (area === 'local' && changes.deixadisso_download_status) {
       const info = changes.deixadisso_download_status.newValue;
       if (info) {
-        if (downloadProgressContainer) downloadProgressContainer.style.display = 'flex';
-        if (downloadProgressFill) downloadProgressFill.style.width = `${info.progress || 0}%`;
-        if (downloadProgressLabel) {
-          downloadProgressLabel.textContent = i18n.t('popup.downloadProgressLabel', { percent: info.progress || 0 });
-        }
+        const pct = info.progress || 0;
+        const labelText = info.error
+          ? `Erro: ${info.error}`
+          : (info.text || i18n.t('popup.downloadProgressLabel', { percent: pct }));
 
-        if (info.progress === 100 && !info.isDownloading) {
+        if (downloadProgressContainer) downloadProgressContainer.style.display = 'flex';
+        if (downloadProgressFill) downloadProgressFill.style.width = `${pct}%`;
+        if (downloadProgressLabel) downloadProgressLabel.textContent = labelText;
+
+        if (controlsProgressContainer) controlsProgressContainer.style.display = 'flex';
+        if (controlsProgressFill) controlsProgressFill.style.width = `${pct}%`;
+        if (controlsProgressLabel) controlsProgressLabel.textContent = labelText;
+
+        if (pct === 100 && !info.isDownloading) {
           updateModelStatus();
         }
       }
@@ -343,8 +380,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   if (controlsBackendSelect) {
     controlsBackendSelect.addEventListener('change', async () => {
-      await persistSettings({ backend: controlsBackendSelect.value });
+      const newBackend = controlsBackendSelect.value;
+      await persistSettings({ backend: newBackend });
       await updateModelStatus();
+      // Se o usuário selecionou WebLLM e o modelo ainda não está em cache, inicia o download automaticamente
+      if (newBackend === 'webllm') {
+        const st = await chrome.runtime.sendMessage({
+          type: 'GET_MODEL_STATUS',
+          backend: newBackend,
+          modelId: controlsModelSelect?.value
+        });
+        if (st && st.status === 'download_available') {
+          triggerModelDownload();
+        }
+      }
     });
   }
   if (setupModelSelect) {
@@ -355,8 +404,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   if (controlsModelSelect) {
     controlsModelSelect.addEventListener('change', async () => {
-      await persistSettings({ webllmModel: controlsModelSelect.value });
+      const newModel = controlsModelSelect.value;
+      await persistSettings({ webllmModel: newModel });
       await updateModelStatus();
+      if (controlsBackendSelect?.value === 'webllm') {
+        const st = await chrome.runtime.sendMessage({
+          type: 'GET_MODEL_STATUS',
+          backend: 'webllm',
+          modelId: newModel
+        });
+        if (st && st.status === 'download_available') {
+          triggerModelDownload();
+        }
+      }
     });
   }
 

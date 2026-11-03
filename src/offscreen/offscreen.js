@@ -16,6 +16,19 @@ function getPromptAPI() {
   return globalThis.DeixaDissoPromptAPI;
 }
 
+function broadcastDownloadStatus(payload) {
+  try {
+    if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+      chrome.storage.local.set({ deixadisso_download_status: payload });
+    } else if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+      chrome.runtime.sendMessage({
+        type: 'OFFSCREEN_DOWNLOAD_PROGRESS',
+        payload
+      }).catch(() => {});
+    }
+  } catch (_) {}
+}
+
 async function getBackendConfig(override = {}) {
   const defaults = {
     backend: globalThis.DEIXADISSO_CONSTANTS?.DEFAULT_SETTINGS?.backend || 'auto',
@@ -23,18 +36,20 @@ async function getBackendConfig(override = {}) {
   };
 
   try {
-    const data = await chrome.storage.local.get('deixadisso_settings');
-    const saved = data.deixadisso_settings || {};
-    return {
-      backend: override.backend || saved.backend || defaults.backend,
-      modelId: override.modelId || saved.webllmModel || defaults.webllmModel
-    };
-  } catch (_) {
-    return {
-      backend: override.backend || defaults.backend,
-      modelId: override.modelId || defaults.webllmModel
-    };
-  }
+    if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+      const data = await chrome.storage.local.get('deixadisso_settings');
+      const saved = data.deixadisso_settings || {};
+      return {
+        backend: override.backend || saved.backend || defaults.backend,
+        modelId: override.modelId || saved.webllmModel || defaults.webllmModel
+      };
+    }
+  } catch (_) {}
+
+  return {
+    backend: override.backend || defaults.backend,
+    modelId: override.modelId || defaults.webllmModel
+  };
 }
 
 async function checkModelStatus(options = {}) {
@@ -94,12 +109,10 @@ async function startModelDownload(options = {}) {
         downloadStatusText = info?.text || `Baixando modelo: ${downloadPercent}%`;
         console.log(`[DeixaDisso] Progresso: ${downloadPercent}% - ${downloadStatusText}`);
 
-        chrome.storage.local.set({
-          deixadisso_download_status: {
-            isDownloading: true,
-            progress: downloadPercent,
-            text: downloadStatusText
-          }
+        broadcastDownloadStatus({
+          isDownloading: true,
+          progress: downloadPercent,
+          text: downloadStatusText
         });
       }
     });
@@ -109,12 +122,10 @@ async function startModelDownload(options = {}) {
     downloadStatusText = 'Download concluído! IA local pronta.';
     console.log('[DeixaDisso] Sessão de IA local criada com sucesso!');
 
-    chrome.storage.local.set({
-      deixadisso_download_status: {
-        isDownloading: false,
-        progress: 100,
-        text: 'Pronto!'
-      }
+    broadcastDownloadStatus({
+      isDownloading: false,
+      progress: 100,
+      text: 'Pronto!'
     });
 
     const finalStatus = await promptApi.checkAvailability(config);
@@ -123,12 +134,10 @@ async function startModelDownload(options = {}) {
     isDownloading = false;
     downloadStatusText = `Erro no download: ${err.message}`;
     console.error('[DeixaDisso] Erro ao inicializar modelo:', err);
-    chrome.storage.local.set({
-      deixadisso_download_status: {
-        isDownloading: false,
-        progress: 0,
-        error: err.message
-      }
+    broadcastDownloadStatus({
+      isDownloading: false,
+      progress: 0,
+      error: err.message
     });
     throw err;
   }
