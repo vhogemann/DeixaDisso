@@ -79,30 +79,33 @@ Output STRICTLY valid JSON:
     avoidAction: '🙏 Left it alone (+1 Peace)',
     avoidRecorded: '✓ Recorded!',
     sourceGeminiNano: 'Gemini Nano (On-device)',
+    sourceWebLLM: 'WebLLM (WebGPU On-device)',
     sourceFallback: 'Anti-Ragebait AI',
     analyzingInitial: 'Evaluating whether replying to this post is worth your time and peace of mind...',
     emptyPost: 'Post without text content.',
-    nanoFailed: 'Gemini Nano did not respond. All analysis relies on the on-device AI model.'
+    nanoFailed: 'The local AI model did not respond. All analysis relies on the on-device AI model.'
   },
 
   popup: {
-    tagline: 'Peace of Mind Filter with Gemini Nano',
+    tagline: 'On-Device Peace of Mind Filter (Nano & WebLLM)',
     statusVerifying: 'Checking...',
-    statusReady: 'Gemini Nano Active',
-    statusDownloading: 'Downloading Nano...',
+    statusReady: 'Local AI Active',
+    statusReadyNano: 'Gemini Nano Active',
+    statusReadyWebLLM: 'WebLLM Active',
+    statusDownloading: 'Downloading AI...',
     statusDownloadAvailable: 'Download Ready',
-    statusFlagsRequired: 'Enable Flags',
+    statusFlagsRequired: 'Setup AI',
 
-    setupTitle: 'Gemini Nano Required',
-    setupSubtitle: 'This extension processes 100% of posts locally via Chrome\'s native <b>Prompt API</b>. Because the AI is not yet enabled, analysis is paused and no badges will be displayed on your feeds.',
+    setupTitle: 'On-Device AI Setup',
+    setupSubtitle: 'This extension processes 100% of posts locally in your browser via <b>WebLLM (WebGPU)</b> or <b>Gemini Nano</b>. Download a model below to activate protection with zero browser flags required.',
     
-    downloadActionTitle: '⬇️ Download Gemini Nano Locally',
-    downloadActionDesc: 'Prompt API flags are active! Click below to start downloading the model through Chrome (~1.7 GB).',
-    downloadActionBtn: '⬇️ Start Gemini Nano Download',
+    downloadActionTitle: '⬇️ Download Local AI Model',
+    downloadActionDesc: 'Your browser supports local WebGPU execution! Click below to download the selected model weights (100% private in browser cache).',
+    downloadActionBtn: '⬇️ Download & Activate Local Model',
     downloadingBtn: 'Downloading model...',
     downloadStarting: 'Starting download...',
     downloadProgressLabel: 'Downloading model: {percent}%',
-    downloadComplete: 'Download complete! Gemini Nano is ready.',
+    downloadComplete: 'Download complete! Local AI is ready.',
 
     step1: 'Copy and paste into your address bar:',
     step1Mark: 'Set to <b>Enabled</b>.',
@@ -118,6 +121,12 @@ Output STRICTLY valid JSON:
     statsAvoided: 'Arguments avoided today 🙏',
     statsAnalyzed: 'Posts analyzed',
 
+    sectionBackend: 'AI Engine (On-Device)',
+    backendAuto: 'Automatic (Nano or WebLLM)',
+    backendWebLLM: 'WebLLM (WebGPU • Zero Flags)',
+    backendNano: 'Chrome Gemini Nano (Prompt API)',
+    labelWebLLMModel: 'WebLLM Model:',
+
     sectionPlatforms: 'Monitored Networks',
     sectionSensitivity: 'Sensitivity Level',
     sensLenientTitle: 'Lenient',
@@ -128,10 +137,10 @@ Output STRICTLY valid JSON:
     sensZenDesc: 'Maximum emotional protection',
 
     sectionTester: 'Test a Phrase Now',
-    testerHint: 'Simulate with Gemini Nano',
+    testerHint: 'Simulate with Local AI',
     testerPlaceholder: 'Paste a reply or tweet for the AI to analyze...',
     testerBtn: 'Analyze Post',
-    testerAnalyzing: 'Analyzing with Gemini Nano...',
+    testerAnalyzing: 'Analyzing locally...',
     testerReasonPrefix: 'Diagnosis:',
 
     footer: '100% on-device & private • Zero data sent to the cloud'

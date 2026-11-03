@@ -35,7 +35,25 @@
           Como a IA ainda não está habilitada, a análise está desativada e nenhum badge será exibido nos seus feeds.
         </p>
 
-        <!-- Bloco de Ação de Download Direto (Exibido quando flags já foram ativadas e modelo pode ser baixado) -->
+        <!-- Seletor de Motor & Modelo na Tela de Setup -->
+        <div class="engine-selector-box" style="margin-bottom: 12px;">
+          <label class="engine-select-label" for="setup-backend-select">Motor de IA (On-Device):</label>
+          <select id="setup-backend-select" class="engine-select">
+            <option value="auto">Automático (Nano ou WebLLM)</option>
+            <option value="webllm">WebLLM (WebGPU • Sem Flags)</option>
+            <option value="gemini_nano">Chrome Gemini Nano (Prompt API)</option>
+          </select>
+          <div id="setup-model-group" style="margin-top: 8px;">
+            <label class="engine-select-label" for="setup-model-select">Modelo WebLLM:</label>
+            <select id="setup-model-select" class="engine-select">
+              <option value="Qwen3-0.6B-q4f16_1-MLC">Qwen 3 0.6B (Rápido & Leve • ~380 MB)</option>
+              <option value="gemma3-1b-it-q4f16_1-MLC">Gemma 3 1B (Baixa VRAM 711 MB • ~500 MB)</option>
+              <option value="gemma-2-2b-it-q4f16_1-MLC-1k">Gemma 2 2B (Máxima Precisão • ~1.3 GB)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Bloco de Ação de Download Direto (Exibido quando modelo pode ser baixado via WebLLM ou Nano) -->
         <div id="card-download-action" class="download-action-card" style="display: none;">
           <h3 class="download-action-title">⬇️ Baixar Gemini Nano Localmente</h3>
           <p class="download-action-desc">
@@ -122,6 +140,25 @@
           <span class="stat-label">Posts analisados</span>
         </div>
       </div>
+
+      <!-- AI Engine Selector -->
+      <section class="section">
+        <h2 class="section-title" id="section-title-backend">Motor de IA (On-Device)</h2>
+        <div class="engine-selector-box">
+          <select id="controls-backend-select" class="engine-select">
+            <option value="auto">Automático (Nano ou WebLLM)</option>
+            <option value="webllm">WebLLM (WebGPU • Sem Flags)</option>
+            <option value="gemini_nano">Chrome Gemini Nano (Prompt API)</option>
+          </select>
+          <div id="controls-model-group" style="margin-top: 6px;">
+            <select id="controls-model-select" class="engine-select">
+              <option value="Qwen3-0.6B-q4f16_1-MLC">Qwen 3 0.6B (Rápido & Leve • ~380 MB)</option>
+              <option value="gemma3-1b-it-q4f16_1-MLC">Gemma 3 1B (Baixa VRAM 711 MB • ~500 MB)</option>
+              <option value="gemma-2-2b-it-q4f16_1-MLC-1k">Gemma 2 2B (Máxima Precisão • ~1.3 GB)</option>
+            </select>
+          </div>
+        </div>
+      </section>
 
       <!-- Platforms -->
       <section class="section">

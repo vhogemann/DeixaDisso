@@ -117,12 +117,21 @@ class ChromeCDP {
 
 // Inicia um servidor HTTP local simples para expor uma origem segura (localhost) ao Chrome
 function startLocalServer(port = DEFAULT_HTTP_PORT) {
+  const bundlePath = path.join(__dirname, '../src/vendor/web-llm.bundle.js');
   const server = http.createServer((req, res) => {
+    if (req.url === '/web-llm.bundle.js' && fs.existsSync(bundlePath)) {
+      res.writeHead(200, { 'Content-Type': 'application/javascript; charset=utf-8' });
+      fs.createReadStream(bundlePath).pipe(res);
+      return;
+    }
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     res.end(`<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><title>DeixaDisso Harness</title></head>
-<body><h1>DeixaDisso Local AI Runner</h1></body>
+<body>
+  <h1>DeixaDisso Local AI Runner</h1>
+  <script src="/web-llm.bundle.js"></script>
+</body>
 </html>`);
   });
 
@@ -163,8 +172,9 @@ async function ensureChromeRunning(cdpPort = DEFAULT_CDP_PORT, httpPort = DEFAUL
     '--headless=new',
     `--remote-debugging-port=${cdpPort}`,
     `--user-data-dir=${PROFILE_DIR}`,
-    '--enable-features=PromptApiForGeminiNano,OptimizationGuideOnDeviceModel',
+    '--enable-features=PromptApiForGeminiNano,OptimizationGuideOnDeviceModel,Vulkan',
     '--enable-blink-features=PromptApiForGeminiNano',
+    '--enable-unsafe-webgpu',
     '--optimization-guide-on-device-model-execution-feature-allowed-for-test',
     '--optimization-guide-performance-class=4',
     '--component-updater=fast-update',
@@ -185,7 +195,7 @@ async function injectPromptAPIHelper(cdp) {
 }
 
 // Executa a inferência para um post individual dentro do Chrome
-async function runInference(cdp, text, systemPrompt, lang = 'pt') {
+async function runInference(cdp, text, systemPrompt, lang = 'pt', backend = 'auto', modelId = '') {
   const start = Date.now();
   const escapedText = JSON.stringify(text);
   const escapedPrompt = JSON.stringify(systemPrompt);
@@ -198,7 +208,9 @@ async function runInference(cdp, text, systemPrompt, lang = 'pt') {
       try {
         const result = await globalThis.DeixaDissoPromptAPI.analyzePost(${escapedText}, {
           systemPrompt: ${escapedPrompt},
-          lang: ${JSON.stringify(lang)}
+          lang: ${JSON.stringify(lang)},
+          backend: ${JSON.stringify(backend)},
+          modelId: ${JSON.stringify(modelId || undefined)}
         });
         return result;
       } catch (err) {
@@ -216,9 +228,28 @@ async function runInference(cdp, text, systemPrompt, lang = 'pt') {
   };
 }
 
-async function runBenchmark(customPrompt = null) {
+function parseCliArgs() {
+  const args = process.argv.slice(2);
+  let backend = process.env.DEIXADISSO_BACKEND || 'auto';
+  let modelId = process.env.DEIXADISSO_MODEL || 'Qwen3-0.6B-q4f16_1-MLC';
+
+  for (const arg of args) {
+    if (arg.startsWith('--backend=')) {
+      backend = arg.split('=')[1];
+    } else if (arg.startsWith('--model=')) {
+      modelId = arg.split('=')[1];
+    }
+  }
+  return { backend, modelId };
+}
+
+async function runBenchmark(customPrompt = null, options = {}) {
+  const cli = parseCliArgs();
+  const backend = options.backend || cli.backend;
+  const modelId = options.modelId || cli.modelId;
+
   console.log(`${colors.bold}====================================================${colors.reset}`);
-  console.log(`${colors.bold}🧠 DeixaDisso - Gemini Nano Prompt Evaluation Harness${colors.reset}`);
+  console.log(`${colors.bold}🧠 DeixaDisso - Local AI Evaluation Harness (${backend})${colors.reset}`);
   console.log(`${colors.bold}====================================================${colors.reset}\n`);
 
   const dataset = JSON.parse(fs.readFileSync(DATASET_PATH, 'utf8'));
@@ -235,19 +266,35 @@ async function runBenchmark(customPrompt = null) {
     await injectPromptAPIHelper(cdp);
 
     // Verifica disponibilidade do modelo no Chrome
-    const availability = await cdp.evaluate('DeixaDissoPromptAPI.checkAvailability()');
-    console.log(`Status da Prompt API no Chrome: ${colors.bold}${availability?.status || 'desconhecido'}${colors.reset} (raw: ${availability?.raw})`);
+    const availability = await cdp.evaluate(`DeixaDissoPromptAPI.checkAvailability({ backend: ${JSON.stringify(backend)}, modelId: ${JSON.stringify(modelId)} })`);
+    console.log(`Status da IA Local no Chrome: ${colors.bold}${availability?.status || 'desconhecido'}${colors.reset} (backend: ${availability?.backend || backend}, raw: ${availability?.raw})`);
 
-    // Se estiver em download_available, aciona a criação de sessão com monitor
-    if (availability?.status === 'download_available' || availability?.raw === 'downloadable') {
-      console.log(`${colors.yellow}O modelo precisa ser carregado. Inicializando sessão...${colors.reset}`);
-      await cdp.evaluate(`
+  if (availability?.status === 'download_available' || availability?.raw === 'downloadable' || backend === 'webllm') {
+      console.log(`${colors.yellow}Inicializando sessão do modelo (${availability?.backend || backend} / ${modelId})...${colors.reset}`);
+      const initResult = await cdp.evaluate(`
         (async () => {
-          if (window.LanguageModel) {
-            await window.LanguageModel.create();
+          try {
+            let lastBucket = -1;
+            await DeixaDissoPromptAPI.createSession({
+              backend: ${JSON.stringify(backend)},
+              modelId: ${JSON.stringify(modelId)},
+              onProgress: (pct, info) => {
+                const bucket = Math.floor(pct / 20) * 20;
+                if (bucket > lastBucket) {
+                  lastBucket = bucket;
+                  console.log('[WebLLM Init]', pct + '%', info?.text || '');
+                }
+              }
+            });
+            return { ok: true };
+          } catch (e) {
+            return { ok: false, error: e.message || String(e) };
           }
         })()
       `, true);
+      if (initResult && !initResult.ok) {
+        throw new Error(`Falha ao inicializar sessão (${backend} / ${modelId}): ${initResult.error}`);
+      }
     }
 
     const results = [];
@@ -265,7 +312,7 @@ async function runBenchmark(customPrompt = null) {
 
       process.stdout.write(`[${i + 1}/${dataset.length}] ${colors.bold}${item.id}${colors.reset} (${item.category})... `);
 
-      const inference = await runInference(cdp, item.text, systemPrompt, lang);
+      const inference = await runInference(cdp, item.text, systemPrompt, lang, backend, modelId);
       totalLatency += (inference.durationMs || 0);
 
       const isMatch = inference.verdict === item.expectedVerdict;
@@ -323,9 +370,11 @@ async function runBenchmark(customPrompt = null) {
     if (!fs.existsSync(RESULTS_DIR)) {
       fs.mkdirSync(RESULTS_DIR, { recursive: true });
     }
-    const outputPath = path.join(RESULTS_DIR, 'latest.json');
-    fs.writeFileSync(outputPath, JSON.stringify({
+    const safeModelSuffix = backend === 'webllm' ? `_${modelId.replace(/[^a-zA-Z0-9._-]/g, '_')}` : `_${backend}`;
+    const reportData = {
       timestamp: new Date().toISOString(),
+      backend,
+      modelId: backend === 'webllm' ? modelId : 'gemini_nano',
       accuracy,
       correctCount,
       totalCount: dataset.length,
@@ -333,9 +382,13 @@ async function runBenchmark(customPrompt = null) {
       falseNegatives,
       avgLatencyMs: avgLatency,
       results
-    }, null, 2));
+    };
+    const outputPath = path.join(RESULTS_DIR, 'latest.json');
+    const modelOutputPath = path.join(RESULTS_DIR, `results${safeModelSuffix}.json`);
+    fs.writeFileSync(outputPath, JSON.stringify(reportData, null, 2));
+    fs.writeFileSync(modelOutputPath, JSON.stringify(reportData, null, 2));
 
-    console.log(`Relatório detalhado gravado em: ${colors.gray}${outputPath}${colors.reset}`);
+    console.log(`Relatório detalhado gravado em: ${colors.gray}${modelOutputPath}${colors.reset}`);
     return { accuracy, falsePositives, falseNegatives, results };
   } finally {
     cdp.close();

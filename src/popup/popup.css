@@ -277,6 +277,39 @@ input:checked + .slider:before {
   color: var(--text-sub);
 }
 
+/* Engine Selector */
+.engine-selector-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.engine-select-label {
+  display: block;
+  font-size: 10.5px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.engine-select {
+  width: 100%;
+  background: var(--bg-secondary);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  border-radius: 7px;
+  padding: 6px 8px;
+  font-size: 11.5px;
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+}
+
+.engine-select:focus {
+  border-color: var(--accent-purple);
+}
+
 /* Platform List */
 .platform-list {
   display: flex;

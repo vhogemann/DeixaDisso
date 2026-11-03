@@ -1,6 +1,6 @@
-// Bridge para Gemini Nano (Prompt API do Chrome) no documento Offscreen
+// Bridge Híbrido para IA Local (Gemini Nano + @mlc-ai/web-llm) no documento Offscreen
 
-let nanoSession = null;
+let activeSession = null;
 let isDownloading = false;
 let downloadPercent = 0;
 let downloadStatusText = '';
@@ -12,16 +12,32 @@ function getSystemPrompt() {
   return '';
 }
 
-// Utiliza o helper unificado da Prompt API
 function getPromptAPI() {
   return globalThis.DeixaDissoPromptAPI;
 }
 
-async function checkModelStatus() {
-  if (nanoSession) {
-    return { status: 'ready' };
-  }
+async function getBackendConfig(override = {}) {
+  const defaults = {
+    backend: globalThis.DEIXADISSO_CONSTANTS?.DEFAULT_SETTINGS?.backend || 'auto',
+    webllmModel: globalThis.DEIXADISSO_CONSTANTS?.DEFAULT_WEBLLM_MODEL || 'Qwen3-0.6B-q4f16_1-MLC'
+  };
 
+  try {
+    const data = await chrome.storage.local.get('deixadisso_settings');
+    const saved = data.deixadisso_settings || {};
+    return {
+      backend: override.backend || saved.backend || defaults.backend,
+      modelId: override.modelId || saved.webllmModel || defaults.webllmModel
+    };
+  } catch (_) {
+    return {
+      backend: override.backend || defaults.backend,
+      modelId: override.modelId || defaults.webllmModel
+    };
+  }
+}
+
+async function checkModelStatus(options = {}) {
   if (isDownloading) {
     return {
       status: 'downloading',
@@ -34,12 +50,13 @@ async function checkModelStatus() {
   if (!promptApi) {
     return {
       status: 'flags_required',
-      error: 'Prompt API não carregada.'
+      error: 'Prompt API / WebLLM helper não carregado.'
     };
   }
 
   try {
-    const result = await promptApi.checkAvailability();
+    const config = await getBackendConfig(options);
+    const result = await promptApi.checkAvailability(config);
     return result;
   } catch (err) {
     console.warn('[DeixaDisso Offscreen] Erro ao checar status do modelo:', err);
@@ -47,35 +64,35 @@ async function checkModelStatus() {
   }
 }
 
-// Dispara o download oficial do modelo criando a sessão com monitor de downloadprogress
-async function startModelDownload() {
+// Dispara o download/inicialização do modelo (Gemini Nano ou WebLLM via WebGPU)
+async function startModelDownload(options = {}) {
   const promptApi = getPromptAPI();
   if (!promptApi) {
-    throw new Error('Prompt API não encontrada no navegador.');
-  }
-
-  if (nanoSession) {
-    return { status: 'ready' };
+    throw new Error('Módulo de IA local não encontrado.');
   }
 
   if (isDownloading) {
     return { status: 'downloading', progress: downloadPercent };
   }
 
+  const config = await getBackendConfig(options);
+
   isDownloading = true;
   downloadPercent = 0;
-  downloadStatusText = 'Iniciando download pelo Chrome...';
-  console.log('[DeixaDisso] Disparando download do Gemini Nano via Prompt API...');
+  downloadStatusText = 'Iniciando download do modelo local...';
+  console.log(`[DeixaDisso] Disparando inicialização/download (${config.backend} / ${config.modelId})...`);
 
   try {
-    nanoSession = await promptApi.createSession({
+    activeSession = await promptApi.createSession({
+      backend: config.backend,
+      modelId: config.modelId,
       systemPrompt: getSystemPrompt(),
       temperature: 0.3,
       topK: 3,
-      onProgress: (percent, event) => {
+      onProgress: (percent, info) => {
         downloadPercent = percent;
-        downloadStatusText = `Baixando modelo: ${downloadPercent}%`;
-        console.log(`[DeixaDisso] Progresso do download: ${downloadPercent}%`);
+        downloadStatusText = info?.text || `Baixando modelo: ${downloadPercent}%`;
+        console.log(`[DeixaDisso] Progresso: ${downloadPercent}% - ${downloadStatusText}`);
 
         chrome.storage.local.set({
           deixadisso_download_status: {
@@ -89,8 +106,8 @@ async function startModelDownload() {
 
     isDownloading = false;
     downloadPercent = 100;
-    downloadStatusText = 'Download concluído! Gemini Nano pronto.';
-    console.log('[DeixaDisso] Sessão do Gemini Nano criada com sucesso!');
+    downloadStatusText = 'Download concluído! IA local pronta.';
+    console.log('[DeixaDisso] Sessão de IA local criada com sucesso!');
 
     chrome.storage.local.set({
       deixadisso_download_status: {
@@ -100,11 +117,12 @@ async function startModelDownload() {
       }
     });
 
-    return { status: 'ready' };
+    const finalStatus = await promptApi.checkAvailability(config);
+    return { status: 'ready', backend: finalStatus.backend, modelId: finalStatus.modelId };
   } catch (err) {
     isDownloading = false;
     downloadStatusText = `Erro no download: ${err.message}`;
-    console.error('[DeixaDisso] Erro ao baixar modelo:', err);
+    console.error('[DeixaDisso] Erro ao inicializar modelo:', err);
     chrome.storage.local.set({
       deixadisso_download_status: {
         isDownloading: false,
@@ -116,19 +134,9 @@ async function startModelDownload() {
   }
 }
 
-async function getOrCreateSession() {
-  if (nanoSession) return nanoSession;
-  
-  // Tenta criar ou continuar o download
-  await startModelDownload();
-  if (nanoSession) return nanoSession;
-
-  throw new Error('Não foi possível inicializar a sessão do Gemini Nano.');
-}
-
-async function analyzePostText(text) {
+async function analyzePostText(text, options = {}) {
   const isEn = globalThis.DeixaDissoI18n?.getLocale?.() === 'en';
-  const baseFailed = globalThis.DeixaDissoI18n?.t('ui.nanoFailed') || 'Gemini Nano did not respond.';
+  const baseFailed = globalThis.DeixaDissoI18n?.t('ui.nanoFailed') || 'Local AI model did not respond.';
 
   try {
     const promptApi = getPromptAPI();
@@ -136,14 +144,18 @@ async function analyzePostText(text) {
       throw new Error('Prompt API helper não encontrado.');
     }
 
+    const config = await getBackendConfig(options);
+
     return await promptApi.analyzePost(text, {
+      backend: config.backend,
+      modelId: config.modelId,
       systemPrompt: getSystemPrompt(),
       lang: isEn ? 'en' : 'pt',
       emptyReason: globalThis.DeixaDissoI18n?.t('ui.emptyPost')
     });
   } catch (err) {
-    console.error('[DeixaDisso Offscreen] Erro durante inferência com Gemini Nano:', err);
-    nanoSession = null;
+    console.error('[DeixaDisso Offscreen] Erro durante inferência local:', err);
+    activeSession = null;
 
     const errMsg = err?.message || 'verifique o status do modelo';
     return {
@@ -159,19 +171,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.target !== 'offscreen') return;
 
   if (message.type === 'CHECK_MODEL') {
-    checkModelStatus().then(status => sendResponse(status));
+    checkModelStatus({ backend: message.backend, modelId: message.modelId })
+      .then(status => sendResponse(status));
     return true;
   }
 
   if (message.type === 'START_DOWNLOAD') {
-    startModelDownload()
+    startModelDownload({ backend: message.backend, modelId: message.modelId })
       .then(result => sendResponse(result))
       .catch(err => sendResponse({ status: 'error', error: err.message }));
     return true;
   }
 
   if (message.type === 'ANALYZE') {
-    analyzePostText(message.text).then(result => sendResponse(result));
+    analyzePostText(message.text, {
+      backend: message.backend,
+      modelId: message.modelId
+    }).then(result => sendResponse(result));
     return true;
   }
 });

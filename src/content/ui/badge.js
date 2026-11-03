@@ -80,9 +80,13 @@ const DeixaDissoUI = {
     // Preenche cabeçalho
     tooltip._tagElement.className = `deixadisso-tooltip-tag deixadisso-tooltip-badge-tag-${verdict}`;
     tooltip._tagElement.textContent = `${config.icon} ${config.label}`;
-    tooltip._sourceElement.textContent = result?.source === 'gemini_nano'
-      ? (globalThis.DeixaDissoI18n?.t('ui.sourceGeminiNano') || 'Gemini Nano (On-device)')
-      : (globalThis.DeixaDissoI18n?.t('ui.sourceFallback') || 'IA Anti-Ragebait');
+    if (result?.source === 'webllm') {
+      tooltip._sourceElement.textContent = globalThis.DeixaDissoI18n?.t('ui.sourceWebLLM') || 'WebLLM (WebGPU On-device)';
+    } else if (result?.source === 'gemini_nano') {
+      tooltip._sourceElement.textContent = globalThis.DeixaDissoI18n?.t('ui.sourceGeminiNano') || 'Gemini Nano (On-device)';
+    } else {
+      tooltip._sourceElement.textContent = globalThis.DeixaDissoI18n?.t('ui.sourceFallback') || 'IA Anti-Ragebait';
+    }
 
     // Justificativa dinâmica limpa e direta
     tooltip._reasonText.textContent = result?.reason || config.description;

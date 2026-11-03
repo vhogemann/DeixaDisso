@@ -143,14 +143,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   const CONSTS = globalThis.DEIXADISSO_CONSTANTS || {};
 
   if (msgType === CONSTS.MESSAGE_TYPES?.ANALYZE_POST || msgType === 'ANALYZE_POST') {
-    handlePostAnalysis(message.text, message.sensitivity).then(result => {
+    handlePostAnalysis(message.text, message.sensitivity, {
+      backend: message.backend,
+      modelId: message.modelId
+    }).then(result => {
       sendResponse(result);
     });
     return true; // Resposta assíncrona
   }
 
   if (msgType === CONSTS.MESSAGE_TYPES?.GET_MODEL_STATUS || msgType === 'GET_MODEL_STATUS') {
-    checkModelStatus().then(status => {
+    checkModelStatus({
+      backend: message.backend,
+      modelId: message.modelId
+    }).then(status => {
       updateActionBadge(status?.status);
       sendResponse(status);
     });
@@ -164,7 +170,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (msgType === 'START_DOWNLOAD') {
     updateActionBadge('downloading');
-    startModelDownload().then(res => {
+    startModelDownload({
+      backend: message.backend,
+      modelId: message.modelId
+    }).then(res => {
       if (res && res.status === 'ready') {
         updateActionBadge('ready');
       }
@@ -184,19 +193,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
-async function startModelDownload() {
+async function startModelDownload(options = {}) {
   try {
     await setupOffscreenDocument();
     return await chrome.runtime.sendMessage({
       target: 'offscreen',
-      type: 'START_DOWNLOAD'
+      type: 'START_DOWNLOAD',
+      backend: options.backend,
+      modelId: options.modelId
     });
   } catch (err) {
     return { status: 'error', error: err.message };
   }
 }
 
-async function handlePostAnalysis(text, sensitivity) {
+async function handlePostAnalysis(text, sensitivity, options = {}) {
   if (!text || text.trim().length === 0) {
     return {
       verdict: 'safe',
@@ -218,7 +229,9 @@ async function handlePostAnalysis(text, sensitivity) {
       target: 'offscreen',
       type: 'ANALYZE',
       text,
-      sensitivity
+      sensitivity,
+      backend: options.backend,
+      modelId: options.modelId
     });
 
     if (result && result.verdict) {
@@ -242,12 +255,14 @@ async function handlePostAnalysis(text, sensitivity) {
   };
 }
 
-async function checkModelStatus() {
+async function checkModelStatus(options = {}) {
   try {
     await setupOffscreenDocument();
     const status = await chrome.runtime.sendMessage({
       target: 'offscreen',
-      type: 'CHECK_MODEL'
+      type: 'CHECK_MODEL',
+      backend: options.backend,
+      modelId: options.modelId
     });
     return status;
   } catch (err) {

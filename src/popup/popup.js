@@ -21,6 +21,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   const toggleBluesky = document.getElementById('toggle-bluesky');
   const toggleThreads = document.getElementById('toggle-threads');
 
+  const setupBackendSelect = document.getElementById('setup-backend-select');
+  const setupModelSelect = document.getElementById('setup-model-select');
+  const setupModelGroup = document.getElementById('setup-model-group');
+  const controlsBackendSelect = document.getElementById('controls-backend-select');
+  const controlsModelSelect = document.getElementById('controls-model-select');
+  const controlsModelGroup = document.getElementById('controls-model-group');
+
   const sensitivityRadios = document.querySelectorAll('input[name="sensitivity"]');
 
   const statAvoided = document.getElementById('stat-avoided');
@@ -68,7 +75,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (statLabels[0]) statLabels[0].textContent = i18n.t('popup.statsAvoided');
     if (statLabels[1]) statLabels[1].textContent = i18n.t('popup.statsAnalyzed');
 
-    const sectionTitles = document.querySelectorAll('.section-title');
+    const elBackendTitle = document.getElementById('section-title-backend');
+    if (elBackendTitle) elBackendTitle.textContent = i18n.t('popup.sectionBackend');
+
+    const sectionTitles = document.querySelectorAll('#view-controls .section-title:not(#section-title-backend)');
     if (sectionTitles[0]) sectionTitles[0].textContent = i18n.t('popup.sectionPlatforms');
     if (sectionTitles[1]) sectionTitles[1].textContent = i18n.t('popup.sectionSensitivity');
     if (sectionTitles[2]) sectionTitles[2].textContent = i18n.t('popup.sectionTester');
@@ -109,30 +119,45 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
+  function syncModelSelectorVisibility(backendValue) {
+    const showModel = backendValue !== 'gemini_nano';
+    if (setupModelGroup) setupModelGroup.style.display = showModel ? 'block' : 'none';
+    if (controlsModelGroup) controlsModelGroup.style.display = showModel ? 'block' : 'none';
+  }
+
   // 3. Checar e alternar entre Tela de Instruções vs Painel de Controles
   async function updateModelStatus() {
     modelStatusBadge.className = 'status-badge status-checking';
     modelStatusText.textContent = i18n.t('popup.statusVerifying');
 
     try {
+      const currentSettings = await globalThis.DeixaDissoStorage.getSettings();
+      const backend = currentSettings.backend || 'auto';
+      const modelId = currentSettings.webllmModel || 'Qwen3-0.6B-q4f16_1-MLC';
+
       // 1. Tenta verificar através do background / offscreen bridge
       let response = null;
       try {
-        response = await chrome.runtime.sendMessage({ type: 'GET_MODEL_STATUS' });
+        response = await chrome.runtime.sendMessage({
+          type: 'GET_MODEL_STATUS',
+          backend,
+          modelId
+        });
       } catch (sendErr) {
         console.warn('[DeixaDisso Popup] Erro ao comunicar com background:', sendErr);
       }
 
       // 2. Se o offscreen não respondeu ou reportou flags_required, checa direto no contexto da janela do Popup
       if ((!response || response.status === 'flags_required') && globalThis.DeixaDissoPromptAPI) {
-        const directCheck = await globalThis.DeixaDissoPromptAPI.checkAvailability();
-        console.log('[DeixaDisso Popup] Checagem direta da Prompt API no Popup:', directCheck);
+        const directCheck = await globalThis.DeixaDissoPromptAPI.checkAvailability({ backend, modelId });
+        console.log('[DeixaDisso Popup] Checagem direta no Popup:', directCheck);
         if (directCheck.status === 'ready' || directCheck.status === 'download_available' || directCheck.status === 'downloading') {
           response = directCheck;
         }
       }
 
       const status = response?.status || 'flags_required';
+      const activeBackend = response?.backend || backend;
       console.log('[DeixaDisso Popup] Status final determinado:', status, response);
       chrome.runtime.sendMessage({ type: 'UPDATE_ACTION_BADGE', status }).catch(() => {});
 
@@ -140,7 +165,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       if (status === 'ready') {
         modelStatusBadge.classList.add('status-ready');
-        modelStatusText.textContent = i18n.t('popup.statusReady');
+        if (activeBackend === 'webllm') {
+          modelStatusText.textContent = i18n.t('popup.statusReadyWebLLM');
+        } else if (activeBackend === 'gemini_nano') {
+          modelStatusText.textContent = i18n.t('popup.statusReadyNano');
+        } else {
+          modelStatusText.textContent = i18n.t('popup.statusReady');
+        }
         viewSetup.style.display = 'none';
         viewControls.style.display = 'flex';
       } else if (status === 'downloading') {
@@ -195,7 +226,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (downloadProgressLabel) downloadProgressLabel.textContent = i18n.t('popup.downloadStarting');
 
       try {
-        const res = await chrome.runtime.sendMessage({ type: 'START_DOWNLOAD' });
+        const currentSettings = await globalThis.DeixaDissoStorage.getSettings();
+        const res = await chrome.runtime.sendMessage({
+          type: 'START_DOWNLOAD',
+          backend: currentSettings.backend || 'auto',
+          modelId: currentSettings.webllmModel || 'Qwen3-0.6B-q4f16_1-MLC'
+        });
         if (res && res.status === 'ready') {
           await updateModelStatus();
         }
@@ -235,15 +271,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Verifica status inicial
-  await updateModelStatus();
-
   // 4. Carregar Configurações
   const settings = await globalThis.DeixaDissoStorage.getSettings();
   toggleMaster.checked = !!settings.enabled;
   toggleTwitter.checked = !!settings.enabledSites?.twitter;
   toggleBluesky.checked = !!settings.enabledSites?.bluesky;
   toggleThreads.checked = !!settings.enabledSites?.threads;
+
+  const savedBackend = settings.backend || 'auto';
+  const savedModel = settings.webllmModel || 'Qwen3-0.6B-q4f16_1-MLC';
+  if (setupBackendSelect) setupBackendSelect.value = savedBackend;
+  if (controlsBackendSelect) controlsBackendSelect.value = savedBackend;
+  if (setupModelSelect) setupModelSelect.value = savedModel;
+  if (controlsModelSelect) controlsModelSelect.value = savedModel;
+  syncModelSelectorVisibility(savedBackend);
+
+  // Verifica status inicial
+  await updateModelStatus();
 
   for (const radio of sensitivityRadios) {
     if (radio.value === settings.sensitivity) {
@@ -258,8 +302,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   statTotal.textContent = stats.totalAnalyzed || 0;
 
   // 6. Salvar Alterações
-  async function persistSettings() {
+  async function persistSettings(override = {}) {
     const activeSensitivity = Array.from(sensitivityRadios).find(r => r.checked)?.value || 'balanced';
+    const backendVal = override.backend || controlsBackendSelect?.value || setupBackendSelect?.value || 'auto';
+    const modelVal = override.webllmModel || controlsModelSelect?.value || setupModelSelect?.value || 'Qwen3-0.6B-q4f16_1-MLC';
+
+    if (setupBackendSelect) setupBackendSelect.value = backendVal;
+    if (controlsBackendSelect) controlsBackendSelect.value = backendVal;
+    if (setupModelSelect) setupModelSelect.value = modelVal;
+    if (controlsModelSelect) controlsModelSelect.value = modelVal;
+    syncModelSelectorVisibility(backendVal);
+
     const newSettings = {
       enabled: toggleMaster.checked,
       enabledSites: {
@@ -268,6 +321,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         threads: toggleThreads.checked
       },
       sensitivity: activeSensitivity,
+      backend: backendVal,
+      webllmModel: modelVal,
       autoAnalyze: true,
       showSafeBadges: true
     };
@@ -275,13 +330,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     await globalThis.DeixaDissoStorage.saveSettings(newSettings);
   }
 
-  toggleMaster.addEventListener('change', persistSettings);
-  toggleTwitter.addEventListener('change', persistSettings);
-  toggleBluesky.addEventListener('change', persistSettings);
-  toggleThreads.addEventListener('change', persistSettings);
+  toggleMaster.addEventListener('change', () => persistSettings());
+  toggleTwitter.addEventListener('change', () => persistSettings());
+  toggleBluesky.addEventListener('change', () => persistSettings());
+  toggleThreads.addEventListener('change', () => persistSettings());
+
+  if (setupBackendSelect) {
+    setupBackendSelect.addEventListener('change', async () => {
+      await persistSettings({ backend: setupBackendSelect.value });
+      await updateModelStatus();
+    });
+  }
+  if (controlsBackendSelect) {
+    controlsBackendSelect.addEventListener('change', async () => {
+      await persistSettings({ backend: controlsBackendSelect.value });
+      await updateModelStatus();
+    });
+  }
+  if (setupModelSelect) {
+    setupModelSelect.addEventListener('change', async () => {
+      await persistSettings({ webllmModel: setupModelSelect.value });
+      await updateModelStatus();
+    });
+  }
+  if (controlsModelSelect) {
+    controlsModelSelect.addEventListener('change', async () => {
+      await persistSettings({ webllmModel: controlsModelSelect.value });
+      await updateModelStatus();
+    });
+  }
 
   for (const radio of sensitivityRadios) {
-    radio.addEventListener('change', persistSettings);
+    radio.addEventListener('change', () => persistSettings());
   }
 
   // 7. Testador Interativo ao Vivo (apenas com Gemini Nano)
@@ -350,9 +430,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         </span>
       `;
 
+      const sourceLabel = result.source === 'webllm'
+        ? i18n.t('ui.sourceWebLLM')
+        : i18n.t('ui.sourceGeminiNano');
+
       testerReason.innerHTML = `
         <b>${i18n.t('popup.testerReasonPrefix')}</b> ${result.reason}
-        <br><small style="color: #64748b; font-size: 10px;">${i18n.t('ui.sourceGeminiNano')}</small>
+        <br><small style="color: #64748b; font-size: 10px;">${sourceLabel}</small>
       `;
 
       const updatedStats = await globalThis.DeixaDissoStorage.getStats();

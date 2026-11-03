@@ -79,30 +79,33 @@ Retorne ESTRITAMENTE um JSON válido:
     avoidAction: '🙏 Deixei disso (+1 Paz)',
     avoidRecorded: '✓ Registrado!',
     sourceGeminiNano: 'Gemini Nano (On-device)',
+    sourceWebLLM: 'WebLLM (WebGPU On-device)',
     sourceFallback: 'IA Anti-Ragebait',
     analyzingInitial: 'Avaliando se responder a este post vale o seu tempo e paz de espírito...',
     emptyPost: 'Post sem conteúdo textual.',
-    nanoFailed: 'O Gemini Nano não respondeu. Toda a análise depende do modelo de IA.'
+    nanoFailed: 'O modelo local não respondeu. Toda a análise depende do modelo de IA.'
   },
 
   popup: {
-    tagline: 'Filtro de Paz Mental com Gemini Nano',
+    tagline: 'Filtro de Paz Mental On-Device (Nano & WebLLM)',
     statusVerifying: 'Verificando...',
-    statusReady: 'Gemini Nano Ativo',
-    statusDownloading: 'Baixando Nano...',
+    statusReady: 'IA Local Ativa',
+    statusReadyNano: 'Gemini Nano Ativo',
+    statusReadyWebLLM: 'WebLLM Ativo',
+    statusDownloading: 'Baixando IA...',
     statusDownloadAvailable: 'Download Pronto',
-    statusFlagsRequired: 'Ativar Flags',
+    statusFlagsRequired: 'Configurar IA',
 
-    setupTitle: 'Gemini Nano Necessário',
-    setupSubtitle: 'Esta extensão processa 100% dos posts localmente através da <b>Prompt API</b> nativa do Chrome. Como a IA ainda não está habilitada, a análise está desativada e nenhum badge será exibido nos seus feeds.',
+    setupTitle: 'Configurar IA On-Device',
+    setupSubtitle: 'Esta extensão processa 100% dos posts localmente no seu navegador via <b>WebLLM (WebGPU)</b> ou <b>Gemini Nano</b>. Baixe um modelo abaixo para ativar a proteção sem precisar configurar flags.',
     
-    downloadActionTitle: '⬇️ Baixar Gemini Nano Localmente',
-    downloadActionDesc: 'As flags da Prompt API estão ativas! Clique abaixo para iniciar o download do modelo pelo Chrome (~1.7 GB).',
-    downloadActionBtn: '⬇️ Iniciar Download do Gemini Nano',
+    downloadActionTitle: '⬇️ Baixar Modelo de IA Localmente',
+    downloadActionDesc: 'Seu navegador suporta execução local! Clique abaixo para baixar os pesos do modelo selecionado (100% privado no cache do navegador).',
+    downloadActionBtn: '⬇️ Baixar e Ativar Modelo Local',
     downloadingBtn: 'Baixando modelo...',
     downloadStarting: 'Iniciando download...',
     downloadProgressLabel: 'Baixando modelo: {percent}%',
-    downloadComplete: 'Download concluído! Gemini Nano pronto.',
+    downloadComplete: 'Download concluído! IA local pronta.',
 
     step1: 'Copie e cole na barra de endereços:',
     step1Mark: 'Marque como <b>Enabled</b>.',
@@ -118,6 +121,12 @@ Retorne ESTRITAMENTE um JSON válido:
     statsAvoided: 'Discussões evitadas hoje 🙏',
     statsAnalyzed: 'Posts analisados',
 
+    sectionBackend: 'Motor de IA (On-Device)',
+    backendAuto: 'Automático (Nano ou WebLLM)',
+    backendWebLLM: 'WebLLM (WebGPU • Sem Flags)',
+    backendNano: 'Chrome Gemini Nano (Prompt API)',
+    labelWebLLMModel: 'Modelo WebLLM:',
+
     sectionPlatforms: 'Redes Monitoradas',
     sectionSensitivity: 'Nível de Sensibilidade',
     sensLenientTitle: 'Tolerante',
@@ -128,10 +137,10 @@ Retorne ESTRITAMENTE um JSON válido:
     sensZenDesc: 'Máxima proteção emocional',
 
     sectionTester: 'Testar Frase Agora',
-    testerHint: 'Simule com o Gemini Nano',
+    testerHint: 'Simule com a IA Local',
     testerPlaceholder: 'Cole uma resposta ou tweet para a IA analisar...',
     testerBtn: 'Analisar Post',
-    testerAnalyzing: 'Analisando com Gemini Nano...',
+    testerAnalyzing: 'Analisando localmente...',
     testerReasonPrefix: 'Diagnóstico:',
 
     footer: '100% on-device & privado • Zero dados enviados para a nuvem'

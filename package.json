@@ -1,10 +1,13 @@
 {
   "name": "deixadisso",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Filtro de Paz Mental & Moderação On-Device com Gemini Nano para redes sociais",
   "main": "src/background/service-worker.js",
   "scripts": {
+    "build:webllm": "esbuild node_modules/@mlc-ai/web-llm/lib/index.js --bundle --minify --format=iife --global-name=DeixaDissoWebLLM --platform=browser --outfile=src/vendor/web-llm.bundle.js",
     "eval": "node harness/eval.js",
+    "eval:webllm": "node harness/eval.js --backend=webllm",
+    "eval:nano": "node harness/eval.js --backend=gemini_nano",
     "eval:docker": "docker compose -f harness/docker-compose.yml up --build",
     "optimize": "node harness/optimize.js",
     "test:i18n": "node -e \"require('./src/shared/i18n/locales/pt_BR.js'); require('./src/shared/i18n/locales/en.js'); console.log('i18n OK');\""
@@ -17,5 +20,9 @@
     "on-device-ai"
   ],
   "author": "Victor Hogemann",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@mlc-ai/web-llm": "^0.2.87",
+    "esbuild": "^0.28.2"
+  }
 }

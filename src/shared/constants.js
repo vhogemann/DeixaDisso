@@ -63,6 +63,32 @@ const DEIXADISSO_CONSTANTS = {
     CACHE: 'deixadisso_cache'
   },
 
+  BACKENDS: {
+    AUTO: 'auto',
+    GEMINI_NANO: 'gemini_nano',
+    WEB_LLM: 'webllm'
+  },
+
+  WEBLLM_MODELS: [
+    {
+      id: 'Qwen3-0.6B-q4f16_1-MLC',
+      name: 'Qwen 3 0.6B (Rápido & Leve • 79% acc)',
+      size: '~380 MB'
+    },
+    {
+      id: 'gemma3-1b-it-q4f16_1-MLC',
+      name: 'Gemma 3 1B (Ultra Baixa VRAM • 711 MB)',
+      size: '~500 MB'
+    },
+    {
+      id: 'gemma-2-2b-it-q4f16_1-MLC-1k',
+      name: 'Gemma 2 2B (Máxima Precisão • 0 FN)',
+      size: '~1.3 GB'
+    }
+  ],
+
+  DEFAULT_WEBLLM_MODEL: 'Qwen3-0.6B-q4f16_1-MLC',
+
   DEFAULT_SETTINGS: {
     enabled: true,
     enabledSites: {
@@ -71,6 +97,8 @@ const DEIXADISSO_CONSTANTS = {
       threads: true
     },
     sensitivity: 'balanced', // 'zen' (mais protetor), 'balanced', 'lenient' (tolerante)
+    backend: 'auto',         // 'auto', 'webllm', 'gemini_nano'
+    webllmModel: 'Qwen3-0.6B-q4f16_1-MLC',
     autoAnalyze: true,
     showSafeBadges: true
   }

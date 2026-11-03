@@ -78,7 +78,7 @@
         sensitivity: settings.sensitivity
       });
 
-      if (result && result.source === 'gemini_nano') {
+      if (result && (result.source === 'gemini_nano' || result.source === 'webllm')) {
         // Se o usuário optou por não exibir badges em posts seguros, esconde
         if (result.verdict === 'safe' && settings.showSafeBadges === false) {
           badgeContainer.remove();
@@ -86,7 +86,7 @@
           globalThis.DeixaDissoUI.updateBadge(badgeContainer, result);
         }
       } else {
-        // Prompt API não disponível: não exibe badge
+        // Motor de IA não disponível: não exibe badge
         badgeContainer.remove();
       }
     } catch (err) {
